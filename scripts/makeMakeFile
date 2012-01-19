@@ -1,0 +1,9 @@
+#!/bin/bash
+
+DIR=$(cd $(dirname "$0"); pwd) 
+if [ -f "$DIR/../WoWView.pro" ];
+then
+  qmake -o Makefile    
+else
+  echo "ERROR: Cannot find Project file"
+fi
