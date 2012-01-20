@@ -12,6 +12,9 @@
 #include <QtNetwork/QNetworkAccessManager>
 #include <QtCore/QStringBuilder>
 #include <QtCore/QtDebug>
+#include <QFile>
+#include <QImage>
+#include <QTextStream>
 #include "../include/charData.h"
 #include "../lib/qt-json/json.h"
 
@@ -20,6 +23,11 @@ charData::charData( QString newName, QString newRealm ) {
 
   connect(m_manager, SIGNAL(finished(QNetworkReply*)),
        this, SLOT(replyFinished(QNetworkReply*)));
+
+  m_manager_avatar = new QNetworkAccessManager(this);
+
+  connect(m_manager_avatar, SIGNAL(finished(QNetworkReply*)),
+          this, SLOT(replyFinishedAvatar(QNetworkReply*)));
 
   setChar( newName );
   setRealm( newRealm );
@@ -50,16 +58,23 @@ QVariantMap charData::parseJSON( QString json ) {
   lastModified = QDateTime::currentDateTime();
   fetchedData = result;
 
-  emit newData();
+  emit newData(result);
+  fetchAvatar();
 
   return result;
 }
 
 bool charData::fetchData( ) {
   QString url = QString("http://") % region % QString(".battle.net/api/wow/character/") % realmName % QString("/") % charName;
-  url.toUtf8();
   m_manager->get(QNetworkRequest(QUrl(url)));
   qDebug() << "+ Initialised with URL of: " << url;
+  return TRUE;
+}
+
+bool charData::fetchAvatar( ) {
+  QString url = QString("http://") % region % QString(".battle.net/static-render/") % region % QString("/") % fetchedData["thumbnail"].toString();
+  m_manager_avatar->get(QNetworkRequest(QUrl(url)));
+  qDebug() << "+ Initialised Avatar fetch with URL of: " << url;
   return TRUE;
 }
 
@@ -89,6 +104,20 @@ void charData::replyFinished(QNetworkReply* pReply) {
   QString str(data);
   qDebug("+ Finished download, parsing; ");
   parseJSON(str);
+}
+
+void charData::replyFinishedAvatar(QNetworkReply* pReply) {
+  QString filename = QString("/tmp/current_avatar.") % fetchedData["lastModified"].toString() % QString(".jpg");
+  QImage* avatar = new QImage();
+  avatar->loadFromData(pReply->readAll());
+
+  if(avatar->isNull())
+    qDebug("- ERROR: MALFORMED IMAGE");
+  else
+    avatar->save(filename);
+
+  qDebug("+ Finished Avatar download, saved.");
+  emit newAvatar(filename);
 }
 
 QVariantMap charData::getData( ) {
