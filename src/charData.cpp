@@ -20,19 +20,16 @@
 
 charData::charData( QString newName, QString newRealm ) {
   m_manager = new QNetworkAccessManager(this);
-
-  connect(m_manager, SIGNAL(finished(QNetworkReply*)),
-       this, SLOT(replyFinished(QNetworkReply*)));
+  connect(m_manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
 
   m_manager_avatar = new QNetworkAccessManager(this);
-
-  connect(m_manager_avatar, SIGNAL(finished(QNetworkReply*)),
-          this, SLOT(replyFinishedAvatar(QNetworkReply*)));
+  connect(m_manager_avatar, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinishedAvatar(QNetworkReply*)));
 
   setChar( newName );
   setRealm( newRealm );
   setRegion( "eu" );
   qDebug("+ Initialised charData");
+  fetchData();
 }
 
 QVariantMap charData::parseJSON( QString json ) {
@@ -42,16 +39,10 @@ QVariantMap charData::parseJSON( QString json ) {
   if(!ok) {
     qFatal("An error occurred during parsing");
     exit(1);
+  } else if(result["status"] == "nok") {
+    qFatal("Couldn't find!");
+    exit(1);
   }
-
-  qDebug() << "Name:  \t" << result["name"].toString();
-  qDebug() << "Realm: \t" << result["realm"].toString();
-  qDebug() << "Class: \t" << result["class"].toString();
-  qDebug() << "Race:  \t" << result["race"].toString();
-  qDebug() << "Gender:\t" << result["gender"].toString();
-  qDebug() << "Level: \t" << result["level"].toString();
-  qDebug() << "Achie: \t" << result["achievementPoints"].toString();
-  qDebug() << "Thumb: \t" << result["thumbnail"].toString();
 
   charName  = result["name"].toString();
   realmName = result["realm"].toString();
@@ -66,7 +57,7 @@ QVariantMap charData::parseJSON( QString json ) {
 
 bool charData::fetchData( ) {
   QString url = QString("http://") % region % QString(".battle.net/api/wow/character/") % realmName % QString("/") % charName;
-  m_manager->get(QNetworkRequest(QUrl(url)));
+  m_manager->get(QNetworkRequest(QUrl().fromUserInput(url)));
   qDebug() << "+ Initialised with URL of: " << url;
   return TRUE;
 }
@@ -125,6 +116,6 @@ QVariantMap charData::getData( ) {
 }
 
 charData::~charData( ) {
-  delete this;
+  
 }
 
